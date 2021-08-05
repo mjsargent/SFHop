@@ -42,7 +42,7 @@ def main():
     # Common arguments
     parser.add_argument('--exp_name', type=str, default=os.path.basename(__file__).rstrip(".py"),
                         help='the name of this experiment')
-    parser.add_argument("--alg", type=str, default="DQN")
+    parser.add_argument("--alg", type=str, default="SF")
     parser.add_argument('--gym_id', type=str, default="MiniGrid-MTEnvFourRooms-v0",
                         help='the id of the gym environment')
     parser.add_argument('--learning_rate', type=float, default=1e-4,
@@ -88,7 +88,8 @@ def main():
     parser.add_argument('--fully_observable', type=lambda x:bool(strtobool(x)), default=False,help="use full obs wrapper or not")
     parser.add_argument('--task_frequency', type=int, default=100000, help="how many transitions before changing tasks")
     parser.add_argument('--on_policy', type=lambda x:bool(strtobool(x)),default=False, help="use on or off policy evaluation")
-    parser.add_argument('--struct_task', type=str, default="wall_colour",help="which structural task to use")
+    parser.add_argument('--struct_task', type=str,choices=["default", "wall_colour", "landmarks"], default="wall_colour",help="which structural task to use")
+    parser.add_argument('--show_training', type=lambda x:bool(strtobool(x)), default=False,help="render the env during training")
     args = parser.parse_args()
 
 
@@ -131,6 +132,9 @@ def main():
             action = torch.argmax(logits, dim=1).tolist()[0][0]
 
         next_obs, reward, done, info = env.step(action)
+        
+        if args.show_training:
+            env.render()
         
         episode_reward += reward
 

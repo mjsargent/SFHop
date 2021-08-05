@@ -36,9 +36,10 @@ class QNetwork(nn.Module):
         x = np.swapaxes(x,1,3)
 
         x = torch.FloatTensor(x).to(device)
+        # TODO this does not work atm
         # return this in a list to allow for quick and dirty
         # interoperability between algorithms in the main loop
-        return [self.network(x),]
+        return [self.network(x)]
 
     def post_step(self,obs, action, reward, next_obs, done):
         pass
