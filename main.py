@@ -86,9 +86,9 @@ def main():
     parser.add_argument('--mu_net_coeff', type=float, default=3,
                         help="coefficent used for determining the init of mu net")
     parser.add_argument('--fully_observable', type=lambda x:bool(strtobool(x)), default=False,help="use full obs wrapper or not")
-    parser.add_argument('--task_frequency', type=int, default=20000, help="how many transitions before changing tasks")
+    parser.add_argument('--task_frequency', type=int, default=100000, help="how many transitions before changing tasks")
     parser.add_argument('--on_policy', type=lambda x:bool(strtobool(x)),default=False, help="use on or off policy evaluation")
-    parser.add_argument('--struct_task', type=str, default="default",help="which structural task to use")
+    parser.add_argument('--struct_task', type=str, default="wall_colour",help="which structural task to use")
     args = parser.parse_args()
 
 
