@@ -35,16 +35,17 @@ def main():
     import random
     import os
     
-    torch.autograd.set_detect_anomaly(True)
-    from utils import create_env, create_net, create_replay_buffer, set_seeds, linear_schedule, change_task
+    from utils import create_env, create_net, create_replay_buffer, set_seeds, get_epsilon, change_task
 
     parser = argparse.ArgumentParser(description="multi task RL")
     # Common arguments
     parser.add_argument('--exp_name', type=str, default=os.path.basename(__file__).rstrip(".py"),
                         help='the name of this experiment')
     parser.add_argument("--alg", type=str, default="SF")
-    parser.add_argument('--gym_id', type=str, default="MiniGrid-MTEnvFourRooms-v0",
-                        help='the id of the gym environment')
+    #parser.add_argument('--gym_id', type=str, default="MiniGrid-MTEnvFourRooms-v0",
+    #                    help='the id of the gym environment')
+    parser.add_argument("--env", type=str, default="MiniGridFourRooms", choices= ["MiniGridFourRooms"], help="env to use")
+    
     parser.add_argument('--learning_rate', type=float, default=1e-4,
                         help='the learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=2,
@@ -57,11 +58,9 @@ def main():
                         help='if toggled, cuda will not be enabled by default')
     parser.add_argument('--prod_mode', type=lambda x:bool(strtobool(x)), default=False, nargs='?', const=True,
                         help='run the script in production mode and use wandb to log outputs')
-    parser.add_argument("--wandb_project_name",  type=str, default=None, help="the wandb's project name")
-
+    parser.add_argument("--wandb_project_name",  type=str, default="SFHop", help="the wandb's project name")
     parser.add_argument('--wandb_entity', type=str, default=None,
                         help="the entity (team) of wandb's project")
-    
     # Algorithm specific arguments
     parser.add_argument('--buffer_size', type=int, default=1000000,
                          help='the replay memory buffer size')
@@ -79,6 +78,7 @@ def main():
                         help="the ending epsilon for exploration")
     parser.add_argument('--exploration_fraction', type=float, default=0.10,
                         help="the fraction of `total-timesteps` it takes from start-e to go end-e")
+    parser.add_argument('--override_e', type=float, default=-1, help="use a static epsilon instead of a scheduler")
     parser.add_argument('--learning_starts', type=int, default=80000,
                         help="timestep to start learning")
     parser.add_argument('--train_frequency', type=int, default=4,
@@ -88,13 +88,13 @@ def main():
     parser.add_argument('--fully_observable', type=lambda x:bool(strtobool(x)), default=False,help="use full obs wrapper or not")
     parser.add_argument('--task_frequency', type=int, default=100000, help="how many transitions before changing tasks")
     parser.add_argument('--on_policy', type=lambda x:bool(strtobool(x)),default=False, help="use on or off policy evaluation")
-    parser.add_argument('--struct_task', type=str,choices=["default", "wall_colour", "landmarks"], default="wall_colour",help="which structural task to use")
+    parser.add_argument('--task', type=str,choices=["static", "shuffled" ,"wall_colour", "landmarks"], default="wall_colour",help="which structural task to use")
     parser.add_argument('--show_training', type=lambda x:bool(strtobool(x)), default=False,help="render the env during training")
     args = parser.parse_args()
 
 
     device = torch.device('cuda' if torch.cuda.is_available() and args.cuda else 'cpu')
-    experiment_name = f"{args.gym_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    experiment_name = f"{args.env}__{args.exp_name}__{args.seed}__{int(time.time())}"
     writer = SummaryWriter(f"runs/{experiment_name}")
     writer.add_text('hyperparameters', "|param|value|\n|-|-|\n%s" % (
         '\n'.join([f"|{key}|{value}|" for key, value in vars(args).items()])))
@@ -106,14 +106,15 @@ def main():
     writer = SummaryWriter(f"/tmp/{experiment_name}")
 
 
-    env = create_env(args.gym_id, args.struct_task)
+    #env = create_env(args.gym_id, args.struct_task)
+    env = create_env(args.env, args.task)
     net = create_net(args.alg, env,args.learning_rate)
     target_net = create_net(args.alg, env, args.learning_rate)
     
     net.to(device)
     target_net.to(device)
 
-    rb = create_replay_buffer(args.buffer_size,args.alg, args.gym_id, args.fully_observable)
+    rb = create_replay_buffer(args.buffer_size,args.alg, args.env, args.fully_observable)
 
     set_seeds(env,args.seed, args.torch_deterministic)
 
@@ -121,7 +122,7 @@ def main():
     episode_reward = 0
 
     for global_step in range(args.total_timesteps):
-        epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction*args.total_timesteps, global_step)
+        epsilon = get_epsilon(args.start_e, args.end_e, args.exploration_fraction*args.total_timesteps, global_step, args.override_e)
 
         obs = np.array(obs)
         logits = net.forward(obs.reshape((1,)+obs.shape), device)[0]
@@ -151,7 +152,7 @@ def main():
         obs = next_obs
 
         if global_step % args.task_frequency == 0:
-            env = change_task(env, writer, args.struct_task)
+            env = change_task(env, writer, args.task)
 
         if done:
             # important to note that because `EpisodicLifeEnv` wrapper is applied,

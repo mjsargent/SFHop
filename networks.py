@@ -63,7 +63,7 @@ class QNetwork(nn.Module):
         nn.utils.clip_grad_norm_(list(self.parameters()), max_grad_norm)
         self.optimizer.step()
 
-    def compute_extra_stats(writer,env, prod):
+    def compute_extra_stats(self,writer,env,episode_reward, global_step, prod):
         pass
 
 
@@ -176,7 +176,7 @@ class SFNet(nn.Module):
         nn.utils.clip_grad_norm_(list(self.parameters()), max_grad_norm)
         self.optimizer.step()
 
-    def compute_extra_stats(writer,env, prod):
+    def compute_extra_stats(self,writer,env,episode_reward, global_step, prod):
         pass
 
 class SFNetOnlineReward(nn.Module):
@@ -306,9 +306,14 @@ class SFNetOnlineReward(nn.Module):
     def compute_extra_stats(self,writer,env,episode_reward, global_step, prod):
 
         if prod:
+            # TODO include other metrics and metric selection 
+
+            metric = "norm_by_max_positive"
             # calulate the maximum possible reward from objects
             max_r_obj = env.possible_object_rewards()
-            # floor to get rid of the reward for reaching the goal
-            score = max_r_obj - np.floor(episode_reward)
-            writer.add_scalar("charts/normalised_score", score, global_step)
+            if metric == "norm_by_max_positive":
+
+                # floor to get rid of the reward for reaching the goal 
+                score =  np.floor(episode_reward) - max_r_obj / (max_r_obj + 0.00001)
+                writer.add_scalar("charts/normalised_score", score, global_step)
 

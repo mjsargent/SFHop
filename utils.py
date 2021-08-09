@@ -33,21 +33,29 @@ def create_net(alg: str, env: gym.Env, lr: float):
 
     return net
 
+
 def create_env(env_name: str, task, fully_obs:bool = False):
-    
+    _FOURROOMS_TASK_IDS = {"static":"MiniGrid-MTEnvFourRoomsStatic-v0", "shuffled":"MiniGrid-MTEnvFourRoomsShuffleLocations-v0", "wall_colour":"MiniGrid-MTEnvFourRoomsStaticWalls-v0", \
+                       "landmarks":"MiniGrid-MTEnvFourRoomsLandmarks-v0"}
+
+   
     if "MiniGrid" in env_name:
         import gym_minigrid
         from gym_minigrid.wrappers import ImgObsWrapper
-        env = gym.make(env_name)
-        # TODO if task variable is landmarks 
-        #       set inital landmarks
 
-        if fully_obs:
-            from gym_minigrid.wrappers import FullyObsWrapper
-            env = FullyObsWrapper(env)
+        if "MiniGridFourRooms" in env_name:
+            print(_FOURROOMS_TASK_IDS)
+            gym_id = _FOURROOMS_TASK_IDS[task]
+            env = gym.make(gym_id)
+            # TODO if task variable is landmarks 
+            #       set inital landmarks
 
-        env = ImgObsWrapper(env)
-        return env
+            if fully_obs:
+                from gym_minigrid.wrappers import FullyObsWrapper
+                env = FullyObsWrapper(env)
+
+            env = ImgObsWrapper(env)
+            return env
     else:
         pass
         #TODO error handling
@@ -68,9 +76,15 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope =  (end_e - start_e) / duration
     return max(slope * t + start_e, end_e)
 
+def get_epsilon(start_e, end_e, duration, global_step, override_epsilon):
+    if override_epsilon > 0:
+        return override_epsilon
+    else:
+        return linear_schedule(start_e, end_e, duration, global_step)
+
 def change_task(env, writer, task):
     #TODO check env type and choose task change appropriately
-    if task == "default":
+    if task == "static":
         env.set_tile_rewards()
         writer.add_scalars("charts/tile_rewards", env.tile_rewards)
 
