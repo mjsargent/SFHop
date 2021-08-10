@@ -14,9 +14,7 @@ def main():
     Main contains the env-agent loop.
     Adapted from cleanrl https://github.com/vwxyzjn/cleanrl
     """ 
-
     # parse args
-
     import torch
     import torch.nn as nn
     import torch.optim as optim
@@ -126,11 +124,10 @@ def main():
 
         obs = np.array(obs)
         logits = net.forward(obs.reshape((1,)+obs.shape), device)[0]
-
         if random.random() < epsilon:
             action = env.action_space.sample() 
         else:
-            action = torch.argmax(logits, dim=1).tolist()[0][0]
+            action = torch.argmax(logits, dim=1).tolist()[0]
 
         next_obs, reward, done, info = env.step(action)
         

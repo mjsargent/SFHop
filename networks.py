@@ -39,7 +39,9 @@ class QNetwork(nn.Module):
         # TODO this does not work atm
         # return this in a list to allow for quick and dirty
         # interoperability between algorithms in the main loop
-        return [self.network(x)]
+        q = self.network(x)
+        print(q.shape)
+        return [q, 1]
 
     def post_step(self,obs, action, reward, next_obs, done):
         pass
@@ -117,8 +119,7 @@ class SFNet(nn.Module):
         # psi: B x A x d_phi
         psi = torch.cat([self.SF[i](phi).unsqueeze(1) for i in range(self.n_actions)] ,dim=1)
         _w = self.w.unsqueeze(0).repeat(psi.shape[0],1,1)
-        q = torch.bmm(psi,_w)
-        
+        q = torch.bmm(psi,_w).squeeze(2)
         return [q,phi,psi]
 
     def post_step(self,obs,action, reward, next_obs, done ):
@@ -233,8 +234,7 @@ class SFNetOnlineReward(nn.Module):
         # psi: B x A x d_phi
         psi = torch.cat([self.SF[i](phi).unsqueeze(1) for i in range(self.n_actions)] ,dim=1)
         _w = self.w.unsqueeze(0).repeat(psi.shape[0],1,1)
-        q = torch.bmm(psi,_w)
-        
+        q = torch.bmm(psi,_w).squeeze(2)
         self.last_phi = phi.detach()
 
         return [q,phi,psi]
