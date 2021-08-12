@@ -1,3 +1,6 @@
 [submodule "gym-minigrid"]
 	path = gym-minigrid
 	url = https://github.com/mjsargent/gym-minigrid.git
+[submodule "hopfield-layers"]
+	path = hopfield-layers
+	url = https://github.com/mjsargent/hopfield-layers.git

@@ -23,7 +23,7 @@ def create_net(alg: str, env: gym.Env, lr: float):
     elif alg == "SFOnline":
         net = SFNetOnlineReward(env, frames, lr)
         
-    elif alg == "SF_Hop":
+    elif alg == "SFHop":
         net = SFHopNet(env, frames, lr)
 
 
