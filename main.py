@@ -42,8 +42,9 @@ def main():
     parser.add_argument("--alg", type=str, default="SF")
     #parser.add_argument('--gym_id', type=str, default="MiniGrid-MTEnvFourRooms-v0",
     #                    help='the id of the gym environment')
-    parser.add_argument("--env", type=str, default="MiniGridFourRooms", choices= ["MiniGridFourRooms"], help="env to use")
+    #parser.add_argument("--env", type=str, default="MiniGridFourRooms", choices= ["MiniGridFourRooms"], help="env to use")
     
+    parser.add_argument("--env", type=str, default="MiniGridFourRooms", help="env to use")
     parser.add_argument('--learning_rate', type=float, default=1e-4,
                         help='the learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=2,
@@ -105,7 +106,7 @@ def main():
 
 
     #env = create_env(args.gym_id, args.struct_task)
-    env = create_env(args.env, args.task)
+    env = create_env(args.env, args.task, args.fully_observable)
     net = create_net(args.alg, env,args.learning_rate)
     target_net = create_net(args.alg, env, args.learning_rate)
     
@@ -149,6 +150,7 @@ def main():
         obs = next_obs
 
         if global_step % args.task_frequency == 0:
+            print(net.w)
             env = change_task(env, writer, args.task)
 
         if done:

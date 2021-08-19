@@ -5,6 +5,7 @@ import random
 
 from networks import *
 from buffers import *
+from wrappers import *
 
 _COLOURS = ["blue", "red", "purple", "grey", "green", "yellow"]
 
@@ -50,12 +51,22 @@ def create_env(env_name: str, task, fully_obs:bool = False):
             # TODO if task variable is landmarks 
             #       set inital landmarks
 
-            if fully_obs:
-                from gym_minigrid.wrappers import FullyObsWrapper
-                env = FullyObsWrapper(env)
+        else:
+            # accept a gym id directly if not using MT fourrooms
+            gym_id = env_name
 
-            env = ImgObsWrapper(env)
-            return env
+            env = gym.make(gym_id)
+            env = MTWrapper(env)
+
+        if fully_obs:
+            from gym_minigrid.wrappers import FullyObsWrapper
+            env = FullyObsWrapper(env)
+
+        env = ImgObsWrapper(env)
+        print(env)
+        print(env.observation_space)
+        return env
+
     else:
         pass
         #TODO error handling
@@ -99,3 +110,4 @@ def change_task(env, writer, task):
         # TODO write method for moving landmarks
         writer.add_scalars("charts/tile_rewards", env.tile_rewards)
     return env
+

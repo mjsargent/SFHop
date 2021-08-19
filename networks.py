@@ -4,9 +4,17 @@ import torch.functional as F
 import numpy as np
 import random 
 
+# slight hack to get aroud the hyphen 
 import importlib
 hf = importlib.import_module("hopfield-layers.modules")
 #from hopfield_layers.modules import HopfieldLayer
+class View(nn.Module):
+    def __init__(self, shape):
+        super(View, self).__init__()
+        self.shape = shape
+
+    def forward(self, x):
+        return x.view(*self.shape)
 
 # TODO could make everything inhert from an abstract base class
 class QNetwork(nn.Module):
@@ -44,7 +52,6 @@ class QNetwork(nn.Module):
         # return this in a list to allow for quick and dirty
         # interoperability between algorithms in the main loop
         q = self.network(x)
-        print(q.shape)
         return [q, 1]
 
     def post_step(self,obs, action, reward, next_obs, done):
@@ -77,7 +84,7 @@ class SFNet(nn.Module):
     """
     Deep successor feature net
     """
-    def __init__(self, env, frames = 3, lr: float = 3e-4, phi_dim = 32):
+    def __init__(self, env, frames = 3, lr: float = 3e-4, phi_dim = 32, feature_loss = "l_st"):
         super(SFNet, self).__init__()
         n = env.observation_space.shape[0]
         m = env.observation_space.shape[1]
@@ -102,6 +109,13 @@ class SFNet(nn.Module):
             nn.ReLU())
 
         self.phi = nn.Linear(512, self.phi_dim)
+        if feature_loss == "l_st" or feature_loss == "l_st1":
+
+            self.conv_inv = nn.Sequential(
+            nn.Linear(self.phi_dim, 512),
+            nn.ReLU(),
+            
+            )
 
         # need to output a matrix phi_dim X num actions
         self.SF = nn.ModuleList([nn.Sequential(nn.Linear(self.phi_dim,self.phi_dim // 2),\
@@ -109,7 +123,7 @@ class SFNet(nn.Module):
                                                 nn.Linear(self.phi_dim //2, self.phi_dim)) \
                                             for _ in range(self.n_actions)])
          
-        self.w = nn.Parameter(torch.rand(self.phi_dim, 1))
+        self.w = nn.Parameter(torch.zeros(self.phi_dim, 1))
 
         self.loss_fn = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.parameters(),lr = lr)
@@ -119,7 +133,7 @@ class SFNet(nn.Module):
 
         x = torch.FloatTensor(x).to(device)
         z = self.conv(x)
-        phi = self.phi(z)
+        phi = F.relu(self.phi(z))
         # psi: B x A x d_phi
         psi = torch.cat([self.SF[i](phi).unsqueeze(1) for i in range(self.n_actions)] ,dim=1)
         _w = self.w.unsqueeze(0).repeat(psi.shape[0],1,1)
