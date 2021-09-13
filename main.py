@@ -32,7 +32,7 @@ def main():
     import time
     import random
     import os
-    
+    #torch.autograd.set_detect_anomaly(True)    
     from utils import create_env, create_net, create_replay_buffer, set_seeds, get_epsilon, change_task
 
     parser = argparse.ArgumentParser(description="multi task RL")
@@ -45,7 +45,7 @@ def main():
     #parser.add_argument("--env", type=str, default="MiniGridFourRooms", choices= ["MiniGridFourRooms"], help="env to use")
     
     parser.add_argument("--env", type=str, default="MiniGridFourRooms", help="env to use")
-    parser.add_argument('--learning_rate', type=float, default=1e-4,
+    parser.add_argument('--learning_rate', type=float, default=3e-4,
                         help='the learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=2,
                         help='seed of the experiment')
@@ -88,6 +88,7 @@ def main():
     parser.add_argument('--task_frequency', type=int, default=100000, help="how many transitions before changing tasks")
     parser.add_argument('--on_policy', type=lambda x:bool(strtobool(x)),default=False, help="use on or off policy evaluation")
     parser.add_argument('--task', type=str,choices=["static", "shuffled" ,"wall_colour", "landmarks"], default="wall_colour",help="which structural task to use")
+    parser.add_argument('--feature_loss', type=str,choices=["none", "l_st", "l_stp1"], default="l_st",help="which aux objective to use")
     parser.add_argument('--show_training', type=lambda x:bool(strtobool(x)), default=False,help="render the env during training")
     args = parser.parse_args()
 
@@ -107,8 +108,8 @@ def main():
 
     #env = create_env(args.gym_id, args.struct_task)
     env = create_env(args.env, args.task, args.fully_observable)
-    net = create_net(args.alg, env,args.learning_rate)
-    target_net = create_net(args.alg, env, args.learning_rate)
+    net = create_net(args.alg, env,args.learning_rate, args.feature_loss)
+    target_net = create_net(args.alg, env, args.learning_rate, args.feature_loss)
     
     net.to(device)
     target_net.to(device)
@@ -150,7 +151,7 @@ def main():
         obs = next_obs
 
         if global_step % args.task_frequency == 0:
-            print(net.w)
+            #print(net.w)
             env = change_task(env, writer, args.task)
 
         if done:

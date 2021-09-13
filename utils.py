@@ -9,20 +9,24 @@ from wrappers import *
 
 _COLOURS = ["blue", "red", "purple", "grey", "green", "yellow"]
 
-def create_net(alg: str, env: gym.Env, lr: float):
+def create_net(alg: str, env: gym.Env, lr: float, feature_loss: str):
     """
     create a net appropriate for a given rl algo, env and obs size
     """
     frames = 3
     #TODO add env type check to determine if frame stacking is needed (atari) 
+    #TODO add support for passing remaining hyperparams
     if alg == "DQN":
         net = QNetwork(env, frames, lr)
 
     elif alg == "SF":
-        net = SFNet(env, frames, lr)
+        net = SFNet(env, frames, lr, feature_loss=feature_loss)
     
     elif alg == "SFOnline":
         net = SFNetOnlineReward(env, frames, lr)
+
+    elif alg == "SFMiniBatch":
+        net = SFMiniBatch(env, frames, lr, feature_loss=feature_loss)
         
     elif alg == "SFHop":
         net = SFHopNet(env, frames, lr)
@@ -71,8 +75,13 @@ def create_env(env_name: str, task, fully_obs:bool = False):
         pass
         #TODO error handling
 
-def create_replay_buffer(buffer_limit, alg, gym_id, fully_obs):
-    return ReplayBuffer(buffer_limit)
+def create_replay_buffer(buffer_limit, alg, gym_id, fully_obs, rollout_length = 16, p_reward = 0.3):
+    if alg == "SFMiniBatch":
+        return MiniBatchBuffer(buffer_limit, rollout_length)
+    elif alg == "SF":
+        return RewardPriorityBuffer(buffer_limit, p_reward)
+    else:
+        return ReplayBuffer(buffer_limit)
      
 def set_seeds(env,seed, torch_deterministic):
     random.seed(seed)
