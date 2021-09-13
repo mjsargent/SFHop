@@ -130,7 +130,6 @@ def main():
             action = env.action_space.sample() 
         else:
             action = torch.argmax(logits, dim=1).tolist()[0]
-
         next_obs, reward, done, info = env.step(action)
         
         if args.show_training:

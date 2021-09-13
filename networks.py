@@ -172,7 +172,7 @@ class SFNet(nn.Module):
 
         #psi = [self.SF[i](phi_fwd).unsqueeze(1) for i in range(self.n_actions)]
         psi = torch.stack(psi_list, dim=1)
-        q = torch.stack(q_a_list, dim=1) 
+        q = torch.stack(q_a_list, dim=1).squeeze(2)
         #psi = torch.cat([self.SF[i](phi_fwd).unsqueeze(1) for i in range(self.n_actions)] ,dim=1)
        # psi = torch.zeros(phi.shape[0], self.n_actions, self.phi_dim, requires_grad = True).to(device)
         #_w = self.w.clone().detach()
