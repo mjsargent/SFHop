@@ -117,7 +117,7 @@ class SFNet(nn.Module):
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(self.linear_embedding_size, 512),
-            nn.ReLU()
+            nn.Tanh()
         )
         self.conv_phi = nn.Sequential(
             #Scale(1/255),
@@ -132,7 +132,7 @@ class SFNet(nn.Module):
             nn.Linear(self.linear_embedding_size, 512),
             nn.ReLU(),
             nn.Linear(512, self.phi_dim),
-            nn.ReLU()
+            nn.Tanh()
         )
 
         if feature_loss == "l_st" or feature_loss == "l_stp1":
@@ -166,6 +166,7 @@ class SFNet(nn.Module):
         self.optimizer_feature = torch.optim.Adam([*self.conv_phi.parameters(), *self.conv_inv_phi.parameters(), *self.r_pred.parameters()],lr = lr)
         self.optimizer_w = torch.optim.Adam([self.w],lr=2*lr)
         self.optimizer_psi = torch.optim.Adam([*self.conv_fwd.parameters(),*self.SF.parameters()],lr=lr)
+        self.reward_rounding = True
  
     def forward(self, x, device):
         x = np.swapaxes(x,1,3)
@@ -211,6 +212,10 @@ class SFNet(nn.Module):
         s_obs, s_actions, s_rewards, s_next_obses, s_dones = rb.sample(batch_size)
         obs_prediction, phi, pred_r = self.reconstruct_input(s_obs, device, s_actions)
 
+        if self.reward_rounding:
+           # s_rewards[s_rewards.nonzero()] = np.sign(s_rewards[s_rewards.nonzero()])
+           s_rewards = np.sign(s_rewards)
+
         if self.feature_loss == "l_st":
             s_obs = np.swapaxes(s_obs, 1, 3)
             s_obs = torch.FloatTensor(s_obs).to(device)
@@ -238,10 +243,28 @@ class SFNet(nn.Module):
 
     def update_w(self, rb, target_net, writer, device, gamma,global_step, batch_size, max_grad_norm, on_policy):
 
+
+        # update w using linear regressor 
+        # TODO might want different batch size
+        # TODO add w learning rate as hyperparameter
+        lr_w = 0.01
+
         s_obs, s_actions, s_rewards, s_next_obses, s_dones = rb.sample(batch_size)
+        if self.reward_rounding:
+           # s_rewards[s_rewards.nonzero()] = np.sign(s_rewards[s_rewards.nonzero()])
+           s_rewards = np.sign(s_rewards)
+
+        s_rewards = torch.FloatTensor(s_rewards).to(device)
+        # norm by batch!
         phi = self.forward_phi(s_obs, device).detach()
+        #_w = self.w.to(device)
         expected_reward = torch.matmul(phi, self.w.to(device))
-        reward_loss = self.loss_fn(expected_reward.squeeze(1), torch.FloatTensor(s_rewards).to(device))
+        #dw = (s_rewards.unsqueeze(1) - expected_reward).transpose(0,1)
+        #dw = torch.matmul(dw, phi) / phi.shape[0]
+        #_w = (1-lr_w)*_w + lr_w * dw.transpose(0,1)
+        #_w = _w + lr_w * torch.matmul((s_rewards.unsqueeze(1) - expected_reward).transpose(0,1), phi)
+      # keep this reward calculation for logging
+        reward_loss = self.loss_fn(s_rewards, expected_reward.squeeze(1))
         
         self.optimizer_w.zero_grad()
         reward_loss.backward()

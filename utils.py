@@ -4,6 +4,7 @@ import torch
 import random
 
 from networks import *
+from alg import *
 from buffers import *
 from wrappers import *
 
