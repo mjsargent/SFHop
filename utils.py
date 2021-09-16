@@ -39,7 +39,7 @@ def create_net(alg: str, env: gym.Env, lr: float, feature_loss: str):
     return net
 
 
-def create_env(env_name: str, task, fully_obs:bool = False):
+def create_env(env_name: str, task, fully_obs:bool = False, move_penalty = 0.0):
     _FOURROOMS_TASK_IDS = {"static":"MiniGrid-MTEnvFourRoomsStatic-v0", "shuffled":"MiniGrid-MTEnvFourRoomsShuffleLocations-v0", "wall_colour":"MiniGrid-MTEnvFourRoomsStaticWalls-v0", \
                        "landmarks":"MiniGrid-MTEnvFourRoomsLandmarks-v0"}
 
@@ -65,6 +65,8 @@ def create_env(env_name: str, task, fully_obs:bool = False):
         if fully_obs:
             from gym_minigrid.wrappers import FullyObsWrapper
             env = FullyObsWrapper(env)
+        if move_penalty != 0:
+            env = MovePenaltyWrapper(env, move_penalty)
 
         env = ImgObsWrapper(env)
         print(env)

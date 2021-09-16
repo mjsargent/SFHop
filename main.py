@@ -90,8 +90,10 @@ def main():
     parser.add_argument('--task', type=str,choices=["static", "shuffled" ,"wall_colour", "landmarks"], default="wall_colour",help="which structural task to use")
     parser.add_argument('--feature_loss', type=str,choices=["none", "l_st", "l_stp1"], default="l_st",help="which aux objective to use")
     parser.add_argument('--show_training', type=lambda x:bool(strtobool(x)), default=False,help="render the env during training")
-    args = parser.parse_args()
+    parser.add_argument('--move_penalty', type=float, default = 0.0, help="add a penalty to taking actions in the environment")
 
+
+    args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() and args.cuda else 'cpu')
     experiment_name = f"{args.env}__{args.exp_name}__{args.seed}__{int(time.time())}"
@@ -107,7 +109,7 @@ def main():
 
 
     #env = create_env(args.gym_id, args.struct_task)
-    env = create_env(args.env, args.task, args.fully_observable)
+    env = create_env(args.env, args.task, args.fully_observable, args.move_penalty)
     net = create_net(args.alg, env,args.learning_rate, args.feature_loss)
     target_net = create_net(args.alg, env, args.learning_rate, args.feature_loss)
     

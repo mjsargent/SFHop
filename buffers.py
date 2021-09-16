@@ -110,19 +110,25 @@ class RewardPriorityBuffer():
         rewarded_sample = len(self.buffer_r) if rewarded_sample > len(self.buffer_r)  else rewarded_sample
         non_rewarded_sample = n - rewarded_sample 
 
+        # check for the case where an bonus/penalty has been added
+        if len(self.buffer) == 0:
+            mini_batch = None
+        else:
+            mini_batch = random.sample(self.buffer, non_rewarded_sample)
 
-        mini_batch = random.sample(self.buffer, non_rewarded_sample)
-        mini_batch_r = random.sample(self.buffer, rewarded_sample)
+
+        mini_batch_r = random.sample(self.buffer_r, rewarded_sample)
 
         s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
         
-        for transition in mini_batch:
-            s, a, r, s_prime, done_mask = transition
-            s_lst.append(s)
-            a_lst.append(a)
-            r_lst.append(r)
-            s_prime_lst.append(s_prime)
-            done_mask_lst.append(done_mask)
+        if mini_batch is not None:
+            for transition in mini_batch:
+                s, a, r, s_prime, done_mask = transition
+                s_lst.append(s)
+                a_lst.append(a)
+                r_lst.append(r)
+                s_prime_lst.append(s_prime)
+                done_mask_lst.append(done_mask)
 
         for transition in mini_batch_r:
             s, a, r, s_prime, done_mask = transition
@@ -131,10 +137,10 @@ class RewardPriorityBuffer():
             r_lst.append(r)
             s_prime_lst.append(s_prime)
             done_mask_lst.append(done_mask)
-
         return np.array(s_lst), np.array(a_lst), \
                np.array(r_lst), np.array(s_prime_lst), \
                np.array(done_mask_lst)
+
 
 class NullBuffer():
     """

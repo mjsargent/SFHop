@@ -16,3 +16,21 @@ class MTWrapper(gym.core.Wrapper):
     
     def possible_object_rewards(self):
         return 1
+
+class MovePenaltyWrapper(gym.core.Wrapper):
+    """
+    Adds a small penalty to actions akin
+    to some VizDoom mazes
+    """
+
+    def __init__(self, env, penalty = -0.01):
+        super().__init__(env)
+        self.penalty = penalty
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        reward += self.penalty
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
