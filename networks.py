@@ -27,6 +27,8 @@ class DebugPrint(nn.Module):
         return x
 
 # TODO could make everything inhert from an abstract base class
+#class PartialObsMiniGridConv(nn.Module):
+    
 class QNetwork(nn.Module):
     """
     Simple DQN with a target network
@@ -89,8 +91,105 @@ class QNetwork(nn.Module):
     def compute_extra_stats(self,writer,env,episode_reward, global_step, prod):
         pass
 
+class QNetworkReconstruct(QNetwork):
+    def __init__(self, env, frames=3, lr: float = 3e-4):
+        super(QNetworkReconstruct, self).__init__(env, frames, lr)
+        n = env.observation_space.shape[0]
+        m = env.observation_space.shape[1]
+        self.linear_embedding_size = 64* ((n-1)//2 -2) * ((m-1)//2 - 2)
+
+        self.n_actions = env.action_space.n
+        self.network = nn.Sequential(
+            #Scale(1/255),
+            nn.Conv2d(frames, 16, (2,2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2,2)),
+            nn.Conv2d(16, 32,(2,2)),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, (2,2)),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(self.linear_embedding_size, 512),
+            nn.ReLU(),
+        )
+        self.linear_out = frames*n*m
+
+        self.conv_inv = nn.Sequential(
+            nn.Linear(512, self.linear_embedding_size), 
+            nn.ReLU(),
+            nn.Linear(self.linear_embedding_size, self.linear_out //2),
+            nn.ReLU(),
+            nn.Linear(self.linear_out // 2, self.linear_out),
+
+        )  
+        self.q_head = nn.Linear(512, self.n_actions)
+
+        self.optimizer = torch.optim.Adam(self.parameters(),lr = lr)
+        self.loss_fn = nn.MSELoss()
+
+    def forward(self, x, device):
+        x = np.swapaxes(x,1,3)
+        x = torch.FloatTensor(x).to(device)
+        z = self.network(x)
+        q = self.q_head(z)
+        return [q, 1]
+    
+    def reconstruct_input(self, x, device):
+        x = np.swapaxes(x,1,3)
+        x = torch.FloatTensor(x).to(device)
+        z = self.network(x)
+        x_reconstructed = self.conv_inv(z).reshape(*x.shape)
+        return x_reconstructed
+    
+    def update_reconstruct(self,rb, target_net, writer, device, gamma, global_step, batch_size, max_grad_norm, on_policy):
+        s_obs, s_actions, s_rewards, s_next_obses, s_dones = rb.sample(batch_size)
+        obs_prediction = self.reconstruct_input(s_obs, device)
+
+        s_obs = np.swapaxes(s_obs, 1, 3)
+        s_obs = torch.FloatTensor(s_obs).to(device)
+        reconstruct_loss = self.loss_fn(s_obs.flatten(), obs_prediction.flatten())
+        self.optimizer.zero_grad()
+        reconstruct_loss.backward()
+        self.optimizer.step()
+
+
+
+    def update(self,rb, target_net, writer, device, gamma, global_step, batch_size, max_grad_norm, on_policy):
+        
+        self.update_reconstruct(rb, target_net, writer, device, gamma, global_step, batch_size, max_grad_norm, on_policy)
+
+        super(QNetworkReconstruct, self).update(rb, target_net, writer, device, gamma, global_step, batch_size, max_grad_norm, on_policy)
+
+        #s_obs, s_actions, s_rewards, s_next_obses, s_dones = rb.sample(batch_size)
+
+        ##TODO assert that on_policy must be false for DQN)
+        #with torch.no_grad():
+        #    target_max = torch.max(target_net.forward(s_next_obses, device)[0], dim=1)[0]
+        #    td_target = torch.FloatTensor(s_rewards).to(device) + gamma * target_max * (1 - torch.FloatTensor(s_dones).to(device))
+
+        #old_val = self.forward(s_obs, device)[0].gather(1, torch.LongTensor(s_actions).view(-1,1).to(device)).squeeze()
+        #loss = self.loss_fn(td_target, old_val)
+        #    
+        #if global_step % 100 == 0:
+        #    writer.add_scalar("losses/td_loss", loss, global_step)
+
+        #self.optimizer.zero_grad()
+        #loss.backward()
+        #nn.utils.clip_grad_norm_(list(self.parameters()), max_grad_norm)
+        #self.optimizer.step()
+
+
+    def post_step(self, *args):
+        pass
+    
+    def compute_extra_stats(self, *args):
+        pass
+
+        #self.update_reconstruct(rb, target_net, writer, device, gamma, global_step, batch_size, max_grad_norm, on_policy)
+    
 
 class SFNet(nn.Module):
+
     """
     Deep successor feature net
     """

@@ -10,27 +10,30 @@ from wrappers import *
 
 _COLOURS = ["blue", "red", "purple", "grey", "green", "yellow"]
 
-def create_net(alg: str, env: gym.Env, lr: float, feature_loss: str):
+def create_net(args, env: gym.Env):
     """
     create a net appropriate for a given rl algo, env and obs size
     """
     frames = 3
     #TODO add env type check to determine if frame stacking is needed (atari) 
     #TODO add support for passing remaining hyperparams
-    if alg == "DQN":
-        net = QNetwork(env, frames, lr)
+    if args.alg == "DQN":
+        net = QNetwork(env, frames, args.lr)
 
-    elif alg == "SF":
-        net = SFNet(env, frames, lr, feature_loss=feature_loss)
+    elif args.alg == "DQNReconstruct":
+        net = QNetworkReconstruct(env, frames, args.lr)
+
+    elif args.alg == "SF":
+        net = SFNet(env, frames, args.lr, phi_dim = args.phi_dim,feature_loss=args.feature_loss)
     
-    elif alg == "SFOnline":
-        net = SFNetOnlineReward(env, frames, lr)
+    elif args.alg == "SFOnline":
+        net = SFNetOnlineReward(env, frames, args.lr)
 
-    elif alg == "SFMiniBatch":
-        net = SFMiniBatch(env, frames, lr, feature_loss=feature_loss)
+    elif args.alg == "SFMiniBatch":
+        net = SFMiniBatch(env, frames, lr, phi_dim=args.phi_dim, feature_loss=args.feature_loss)
         
-    elif alg == "SFHop":
-        net = SFHopNet(env, frames, lr)
+    elif args.alg == "SFHop":
+        net = SFHopNet(env, frames, args.lr)
 
 
     else:

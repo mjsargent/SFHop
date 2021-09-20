@@ -45,7 +45,7 @@ def main():
     #parser.add_argument("--env", type=str, default="MiniGridFourRooms", choices= ["MiniGridFourRooms"], help="env to use")
     
     parser.add_argument("--env", type=str, default="MiniGridFourRooms", help="env to use")
-    parser.add_argument('--learning_rate', type=float, default=3e-4,
+    parser.add_argument('--lr', type=float, default=3e-4,
                         help='the learning rate of the optimizer')
     parser.add_argument('--seed', type=int, default=2,
                         help='seed of the experiment')
@@ -84,6 +84,7 @@ def main():
                         help="the frequency of training")
     parser.add_argument('--mu_net_coeff', type=float, default=3,
                         help="coefficent used for determining the init of mu net")
+    parser.add_argument('--phi_dim', type=int, default=128, help="dim of phi (and psi_a)")
     parser.add_argument('--fully_observable', type=lambda x:bool(strtobool(x)), default=False,help="use full obs wrapper or not")
     parser.add_argument('--task_frequency', type=int, default=100000, help="how many transitions before changing tasks")
     parser.add_argument('--on_policy', type=lambda x:bool(strtobool(x)),default=False, help="use on or off policy evaluation")
@@ -110,8 +111,8 @@ def main():
 
     #env = create_env(args.gym_id, args.struct_task)
     env = create_env(args.env, args.task, args.fully_observable, args.move_penalty)
-    net = create_net(args.alg, env,args.learning_rate, args.feature_loss)
-    target_net = create_net(args.alg, env, args.learning_rate, args.feature_loss)
+    net = create_net(args, env)
+    target_net = create_net(args, env)
     
     net.to(device)
     target_net.to(device)
